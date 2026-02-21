@@ -1,0 +1,20 @@
+# PyInstaller build output
+build/
+dist/
+*.spec.bak
+
+# User config (contains personal server IP, Steam ID, token)
+rust_overlay_config.json
+rustplus.config.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Claude workspace
+.claude/
+
+# OS
+Thumbs.db
+.DS_Store
