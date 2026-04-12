@@ -22,7 +22,17 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['requests', 'urllib3', 'certifi', 'charset_normalizer', 'idna'],
+    excludes=[
+        # HTTP/network libs not used by this app
+        'requests', 'urllib3', 'certifi', 'charset_normalizer', 'idna',
+        # rustplus camera module deps — not used by this app
+        'numpy', 'scipy', 'PIL', 'Pillow',
+        # other heavy unused packages
+        'setuptools', 'pkg_resources', 'distutils',
+        'pytest', 'pygments', 'psutil',
+        'cryptography',
+        'dateutil',
+    ],
     noarchive=False,
     optimize=1,
 )
