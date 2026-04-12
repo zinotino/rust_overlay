@@ -628,6 +628,70 @@ def preset_export_png(canvas, path):
     except Exception:
         return False
 
+# ── Keybind manager launcher ──────────────────────────────────────────────────
+
+_keybind_proc = None
+
+def launch_keybind_manager():
+    """Launch keybinds.pyw as a separate process."""
+    global _keybind_proc
+    kb_path = _base_dir / "keybinds.pyw"
+    if not kb_path.exists():
+        return
+    # Don't launch if already running
+    if _keybind_proc and _keybind_proc.poll() is None:
+        return
+    _keybind_proc = subprocess.Popen(
+        [sys.executable, str(kb_path), "--embedded"],
+        creationflags=0x00000008 if sys.platform == "win32" else 0,  # DETACHED_PROCESS
+    )
+
+# ── Keybind signal polling ────────────────────────────────────────────────────
+# The keybind manager writes action signals to .keybind_signal for IPC.
+
+def _poll_keybind_signals():
+    sig_path = str(_base_dir / ".keybind_signal")
+    try:
+        if os.path.exists(sig_path):
+            with open(sig_path) as f:
+                action = f.read().strip()
+            os.remove(sig_path)
+            if action == "toggle_crosshair":
+                crosshair.toggle()
+                try:
+                    ch_enabled_var.set(crosshair.visible)
+                except Exception:
+                    pass
+            elif action == "toggle_overlay":
+                if overlay.state() == "withdrawn":
+                    overlay.deiconify()
+                else:
+                    overlay.withdraw()
+            elif action == "cycle_preset":
+                names = sorted(config.get("crosshair_presets", {}).keys())
+                if names:
+                    active = config.get("crosshair_active_preset", "")
+                    try:
+                        idx = names.index(active)
+                        nxt = names[(idx + 1) % len(names)]
+                    except ValueError:
+                        nxt = names[0]
+                    presets = config.get("crosshair_presets", {})
+                    if nxt in presets:
+                        for k, v in presets[nxt].items():
+                            config[k] = v
+                        config["crosshair_active_preset"] = nxt
+                        save_config(config)
+                        crosshair.redraw()
+            elif action == "open_settings":
+                control_panel.deiconify()
+    except Exception:
+        pass
+    try:
+        overlay.after(250, _poll_keybind_signals)
+    except tk.TclError:
+        pass
+
 # ── ADS hide (right-click mouse hook) ────────────────────────────────────────
 # Uses a low-level Windows mouse hook to detect right-click even when the game
 # has focus (since the overlay window is click-through / disabled).
@@ -821,12 +885,13 @@ for _w in (ovl_frame, icon_lbl, time_lbl, skull_lbl, pop_lbl):
 
 def show_menu(e):
     m = tk.Menu(overlay, tearoff=0, bg="#1c1810", fg="#e8d5a3")
-    m.add_command(label="  ⚙  Open Settings", command=lambda: control_panel.deiconify())
-    m.add_command(label="  ⟳  Reconnect",     command=restart_connection)
+    m.add_command(label="  ⚙  Open Settings",   command=lambda: control_panel.deiconify())
+    m.add_command(label="  ⟳  Reconnect",       command=restart_connection)
     ch_label = "  ✛  Crosshair OFF" if crosshair.visible else "  ✛  Crosshair ON"
     m.add_command(label=ch_label, command=crosshair.toggle)
+    m.add_command(label="  ⌨  Keybind Manager", command=launch_keybind_manager)
     m.add_separator()
-    m.add_command(label="  ✕  Exit",           command=do_quit)
+    m.add_command(label="  ✕  Exit",             command=do_quit)
     m.tk_popup(e.x_root, e.y_root)
 
 # ── Control panel ──────────────────────────────────────────────────────────────
@@ -1651,6 +1716,14 @@ def _sync_all_ch_vars():
 
 _rebuild_preset_list()
 
+# ── Keybind manager launch ────────────────────────────────────────────────────
+tk.Frame(settings_frame, bg=_TROUGH, height=1).pack(fill="x", pady=(12, 8))
+tk.Button(settings_frame, text="Open Keybind Manager", bg="#2a2418", fg=_FG,
+          font=("Segoe UI", 10), relief="flat",
+          command=launch_keybind_manager).pack(fill="x", ipady=8, pady=(0, 4))
+tk.Label(settings_frame, text="Configure custom keybinds in a separate lightweight window",
+         bg=_BG, fg="#887050", font=("Segoe UI", 8)).pack(anchor="w", pady=(0, 8))
+
 tips = tk.Frame(settings_frame, bg="#2a2418")
 tips.pack(fill="x", pady=(12, 0))
 tk.Label(tips, text="Controls", bg="#2a2418", fg="#e8d5a3",
@@ -1694,6 +1767,7 @@ overlay.bind_all("<Control-Shift-x>", _toggle_crosshair_hotkey)
 overlay.bind_all("<Control-Shift-X>", _toggle_crosshair_hotkey)
 
 # ── Launch ────────────────────────────────────────────────────────────────────
+_poll_keybind_signals()   # start IPC polling
 overlay.deiconify()
 control_panel.deiconify()
 
