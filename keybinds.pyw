@@ -73,100 +73,103 @@ for _c in range(0x30, 0x3A):
 NAME_TO_VK = {v: k for k, v in VK_NAMES.items()}
 
 # ── Action types ──────────────────────────────────────────────────────────────
-# Focus: Rust in-game commands. All actions type into the game window as
-# normal user keystrokes — safe, server-side, not bannable.
+# Focus: installing popular Rust client-side binds via the F1 console.
+# A "bind" in Rust is a persistent mapping — once you run
+# `bind <key> "<command>"` in F1, Rust remembers it across sessions.
 #
-# param key → meaning:
-#   text       = message/command to send (without leading slash unless needed)
-#   console    = F1 console command
-#   sequence   = semicolon-separated keystrokes (e.g. "7;LMB;6")
+# This tool's job: press a hotkey → it opens F1 and types the bind command
+# for you, so you can one-click install community-favorite binds like
+# autorun, head-lerp toggle, gesture binds, autocraft, fov swap, etc.
 #
-# Chat keys in Rust (defaults):
-#   Enter    → global chat      (Y in some binds, but Enter is the vanilla key)
-#   T        → toggle chat      (not used — we use Enter for reliability)
-#   U        → team chat
-#   F1       → console
+# param keys:
+#   rust_key   = the in-game key to bind (e.g. "n", "mouse4", "f7")
+#   command    = the Rust command(s) to bind (e.g. "forward;sprint")
+#   console    = raw F1 console command (for run-once things like kill)
 
 ACTION_TYPES = {
-    "rust_chat":          {"label": "Rust Chat Command",       "desc": "Open chat, type a message/command, send",   "type": "press"},
-    "rust_team_chat":     {"label": "Rust Team Chat",          "desc": "Open team chat (U), type message, send",    "type": "press"},
-    "rust_console":       {"label": "Rust F1 Console",         "desc": "Open F1 console, run a command, close",     "type": "press"},
-    "rust_hotbar":        {"label": "Rust Hotbar Slot",        "desc": "Switch to a hotbar slot (1-6)",             "type": "press"},
-    "rust_combat_macro":  {"label": "Rust Combat Macro",       "desc": "Keystroke sequence: heal, swap, bandage",   "type": "press"},
-    "toggle_crosshair":   {"label": "Toggle Crosshair",        "desc": "Show/hide crosshair overlay",               "type": "toggle"},
-    "toggle_overlay":     {"label": "Toggle Info Overlay",     "desc": "Show/hide time/population overlay",         "type": "toggle"},
-    "cycle_preset":       {"label": "Cycle Crosshair Preset",  "desc": "Switch to next crosshair preset",           "type": "press"},
-    "open_settings":      {"label": "Open Settings Panel",     "desc": "Show the settings window",                  "type": "press"},
-    "none":               {"label": "No Action",               "desc": "Keybind placeholder (disabled)",            "type": "press"},
+    "rust_bind":         {"label": "Install Rust Bind",      "desc": "Run bind <key> \"<cmd>\" in F1 console",    "type": "press"},
+    "rust_console":      {"label": "Rust Console Command",   "desc": "Run a one-shot F1 console command",         "type": "press"},
+    "toggle_crosshair":  {"label": "Toggle Crosshair",       "desc": "Show/hide crosshair overlay",               "type": "toggle"},
+    "toggle_overlay":    {"label": "Toggle Info Overlay",    "desc": "Show/hide time/population overlay",         "type": "toggle"},
+    "cycle_preset":      {"label": "Cycle Crosshair Preset", "desc": "Switch to next crosshair preset",           "type": "press"},
+    "open_settings":     {"label": "Open Settings Panel",    "desc": "Show the settings window",                  "type": "press"},
+    "none":              {"label": "No Action",              "desc": "Keybind placeholder (disabled)",            "type": "press"},
 }
 
 # ── Popular keybind database ─────────────────────────────────────────────────
-# Community-driven Rust commands. Grouped by category.
-# Modded = requires an Oxide/Carbon server with the relevant plugin.
-# Vanilla = works on any official/community server.
+# The client-side binds the Rust community actually uses. Each entry installs
+# a persistent `bind <key> "<cmd>"` into Rust via the F1 console — you run it
+# once and Rust remembers the bind.
+#
+# Hotkey column = the key you press in THIS app to trigger install.
+# rust_key      = the in-game key that gets bound inside Rust.
 
 POPULAR_BINDS = {
-    "Team & Clan (Modded)": [
-        {"name": "Create Clan",        "key": "Ctrl+Alt+C",   "action": "rust_chat",      "params": {"text": "/clan create "}},
-        {"name": "Clan Invite",        "key": "Ctrl+Alt+I",   "action": "rust_chat",      "params": {"text": "/clan invite "}},
-        {"name": "Clan Info",          "key": "Ctrl+Alt+F",   "action": "rust_chat",      "params": {"text": "/clan"}},
-        {"name": "Clan Chat",          "key": "Ctrl+Alt+X",   "action": "rust_chat",      "params": {"text": "/c "}},
-        {"name": "Team Invite",        "key": "Ctrl+Alt+T",   "action": "rust_chat",      "params": {"text": "/team invite "}},
+    "Movement": [
+        {"name": "Auto-Run (toggle)",       "key": "Ctrl+Alt+1", "action": "rust_bind",
+         "params": {"rust_key": "n",      "command": "forward;sprint"}},
+        {"name": "Auto-Walk",               "key": "Ctrl+Alt+2", "action": "rust_bind",
+         "params": {"rust_key": "mouse4", "command": "forward"}},
+        {"name": "Auto-Crouch (hold sprint)", "key": "Ctrl+Alt+3", "action": "rust_bind",
+         "params": {"rust_key": "capslock", "command": "+duck"}},
     ],
-    "Teleport (Modded)": [
-        {"name": "Teleport Request",   "key": "Ctrl+Alt+R",   "action": "rust_chat",      "params": {"text": "/tpr "}},
-        {"name": "Accept Teleport",    "key": "Ctrl+Alt+A",   "action": "rust_chat",      "params": {"text": "/tpa"}},
-        {"name": "Teleport Home",      "key": "Ctrl+Alt+H",   "action": "rust_chat",      "params": {"text": "/home "}},
-        {"name": "Set Home",           "key": "Ctrl+Alt+S",   "action": "rust_chat",      "params": {"text": "/sethome "}},
-        {"name": "Back (Last Death)",  "key": "Ctrl+Alt+B",   "action": "rust_chat",      "params": {"text": "/back"}},
-        {"name": "Town Teleport",      "key": "Ctrl+Alt+O",   "action": "rust_chat",      "params": {"text": "/town"}},
-        {"name": "Outpost Teleport",   "key": "Ctrl+Alt+P",   "action": "rust_chat",      "params": {"text": "/outpost"}},
+    "Combat & Aim": [
+        {"name": "Head-Lerp Toggle",        "key": "Ctrl+Alt+4", "action": "rust_bind",
+         "params": {"rust_key": "f2",     "command": "client.camerabobscale 0;client.camerabobkneesenabled false"}},
+        {"name": "ADS FOV 70 (hold)",       "key": "Ctrl+Alt+5", "action": "rust_bind",
+         "params": {"rust_key": "mouse2", "command": "+attack2;graphics.fov 70"}},
+        {"name": "FOV 90 Reset",            "key": "Ctrl+Alt+6", "action": "rust_bind",
+         "params": {"rust_key": "f3",     "command": "graphics.fov 90"}},
+        {"name": "Combat Log",              "key": "Ctrl+Alt+7", "action": "rust_bind",
+         "params": {"rust_key": "f4",     "command": "combatlog"}},
     ],
-    "Economy (Modded)": [
-        {"name": "Open Kit Menu",      "key": "Ctrl+K",       "action": "rust_chat",      "params": {"text": "/kit"}},
-        {"name": "Claim Daily Kit",    "key": "Ctrl+Alt+K",   "action": "rust_chat",      "params": {"text": "/kit daily"}},
-        {"name": "Open Shop",          "key": "Ctrl+Shift+P", "action": "rust_chat",      "params": {"text": "/shop"}},
-        {"name": "Check Balance",      "key": "Ctrl+Alt+M",   "action": "rust_chat",      "params": {"text": "/bal"}},
-        {"name": "Trade Request",      "key": "Ctrl+Alt+D",   "action": "rust_chat",      "params": {"text": "/trade "}},
-        {"name": "Remove Tool",        "key": "Ctrl+Alt+U",   "action": "rust_chat",      "params": {"text": "/remove"}},
+    "Crafting (single press)": [
+        {"name": "Craft Bandage",           "key": "Ctrl+Alt+Q", "action": "rust_bind",
+         "params": {"rust_key": "keypad1", "command": "craft.add -2072273936 1"}},
+        {"name": "Craft Syringe",           "key": "Ctrl+Alt+W", "action": "rust_bind",
+         "params": {"rust_key": "keypad2", "command": "craft.add 1livestock 1"}},
+        {"name": "Craft Wood Arrow x10",    "key": "Ctrl+Alt+E", "action": "rust_bind",
+         "params": {"rust_key": "keypad3", "command": "craft.add -1234735557 10"}},
+        {"name": "Craft Building Plan",     "key": "Ctrl+Alt+R", "action": "rust_bind",
+         "params": {"rust_key": "keypad4", "command": "craft.add 1525520776 1"}},
+        {"name": "Craft Hammer",            "key": "Ctrl+Alt+T", "action": "rust_bind",
+         "params": {"rust_key": "keypad5", "command": "craft.add -975723312 1"}},
+        {"name": "Craft Sleeping Bag",      "key": "Ctrl+Alt+Y", "action": "rust_bind",
+         "params": {"rust_key": "keypad6", "command": "craft.add -2036743378 1"}},
     ],
-    "Server Info (Vanilla)": [
-        {"name": "Player List",        "key": "Ctrl+Alt+L",   "action": "rust_chat",      "params": {"text": "/players"}},
-        {"name": "Server Rules",       "key": "Ctrl+Alt+N",   "action": "rust_chat",      "params": {"text": "/info"}},
-        {"name": "Server Time",        "key": "Ctrl+Alt+Y",   "action": "rust_chat",      "params": {"text": "/time"}},
-        {"name": "Wipe Info",          "key": "Ctrl+Alt+W",   "action": "rust_chat",      "params": {"text": "/wipe"}},
-        {"name": "Report Player",      "key": "Ctrl+Alt+Q",   "action": "rust_chat",      "params": {"text": "/report "}},
-        {"name": "Vote Day/Vote Skip", "key": "Ctrl+Alt+V",   "action": "rust_chat",      "params": {"text": "/voteday"}},
+    "Gestures & Emotes": [
+        {"name": "Wave",                    "key": "Ctrl+Alt+Z", "action": "rust_bind",
+         "params": {"rust_key": "keypad7", "command": "gesture wave"}},
+        {"name": "Thumbs Up",               "key": "Ctrl+Alt+X", "action": "rust_bind",
+         "params": {"rust_key": "keypad8", "command": "gesture thumbsup"}},
+        {"name": "Shrug",                   "key": "Ctrl+Alt+C", "action": "rust_bind",
+         "params": {"rust_key": "keypad9", "command": "gesture shrug"}},
+        {"name": "Point",                   "key": "Ctrl+Alt+V", "action": "rust_bind",
+         "params": {"rust_key": "z",       "command": "gesture point"}},
+        {"name": "Chicken",                 "key": "Ctrl+Alt+B", "action": "rust_bind",
+         "params": {"rust_key": "x",       "command": "gesture chicken"}},
     ],
-    "Quick Callouts (Team Chat)": [
-        {"name": "Enemy Spotted",      "key": "Ctrl+F1",      "action": "rust_team_chat", "params": {"text": "ENEMY SPOTTED"}},
-        {"name": "Need Meds",          "key": "Ctrl+F2",      "action": "rust_team_chat", "params": {"text": "need meds"}},
-        {"name": "Rotate to Me",       "key": "Ctrl+F3",      "action": "rust_team_chat", "params": {"text": "rotate to me"}},
-        {"name": "Hold Position",      "key": "Ctrl+F4",      "action": "rust_team_chat", "params": {"text": "hold position"}},
-        {"name": "Fall Back",          "key": "Ctrl+F5",      "action": "rust_team_chat", "params": {"text": "FALL BACK"}},
-        {"name": "All Clear",          "key": "Ctrl+F6",      "action": "rust_team_chat", "params": {"text": "all clear"}},
+    "Graphics Presets": [
+        {"name": "Potato Mode (quality 0)", "key": "Ctrl+Alt+8", "action": "rust_bind",
+         "params": {"rust_key": "f5", "command": "graphics.quality 0;grass.displace false;gfx.ssaa false"}},
+        {"name": "Balanced (quality 3)",    "key": "Ctrl+Alt+9", "action": "rust_bind",
+         "params": {"rust_key": "f6", "command": "graphics.quality 3"}},
+        {"name": "Ultra (quality 5)",       "key": "Ctrl+Alt+0", "action": "rust_bind",
+         "params": {"rust_key": "f7", "command": "graphics.quality 5;gfx.ssaa true"}},
     ],
-    "Console Commands (F1)": [
-        {"name": "Suicide",            "key": "Ctrl+End",     "action": "rust_console",   "params": {"console": "kill"}},
-        {"name": "Respawn",            "key": "Ctrl+Home",    "action": "rust_console",   "params": {"console": "respawn"}},
-        {"name": "Combat Log",         "key": "Ctrl+Shift+L", "action": "rust_console",   "params": {"console": "combatlog"}},
-        {"name": "FPS Counter",        "key": "Ctrl+Shift+F", "action": "rust_console",   "params": {"console": "perf 2"}},
-        {"name": "Graphics Quality 0", "key": "Ctrl+Alt+0",   "action": "rust_console",   "params": {"console": "graphics.quality 0"}},
-        {"name": "Graphics Quality 5", "key": "Ctrl+Alt+5",   "action": "rust_console",   "params": {"console": "graphics.quality 5"}},
-        {"name": "Disconnect",         "key": "Ctrl+Alt+End", "action": "rust_console",   "params": {"console": "disconnect"}},
-    ],
-    "Combat Macros (Safe)": [
-        # These are single-keystroke or simple-swap macros. No rapid fire, no recoil.
-        {"name": "Quick Heal (Slot 6)",    "key": "H",      "action": "rust_combat_macro", "params": {"sequence": "6;LMB"}},
-        {"name": "Quick Bandage (Slot 5)", "key": "B",      "action": "rust_combat_macro", "params": {"sequence": "5;LMB"}},
-        {"name": "Swap to Primary",        "key": "Q",      "action": "rust_hotbar",       "params": {"slot": "1"}},
-        {"name": "Swap to Secondary",      "key": "E",      "action": "rust_hotbar",       "params": {"slot": "2"}},
+    "Utility": [
+        {"name": "Suicide",                 "key": "Ctrl+Alt+K", "action": "rust_bind",
+         "params": {"rust_key": "end",      "command": "kill"}},
+        {"name": "Respawn",                 "key": "Ctrl+Alt+H", "action": "rust_bind",
+         "params": {"rust_key": "home",     "command": "respawn"}},
+        {"name": "Disconnect",              "key": "Ctrl+Alt+D", "action": "rust_bind",
+         "params": {"rust_key": "pagedown", "command": "disconnect"}},
     ],
     "Overlay": [
-        {"name": "Toggle Crosshair",       "key": "Ctrl+Shift+X", "action": "toggle_crosshair"},
-        {"name": "Cycle Preset",           "key": "Ctrl+Shift+C", "action": "cycle_preset"},
-        {"name": "Toggle Info Overlay",    "key": "Ctrl+Shift+O", "action": "toggle_overlay"},
-        {"name": "Open Settings",          "key": "Ctrl+Shift+S", "action": "open_settings"},
+        {"name": "Toggle Crosshair",        "key": "Ctrl+Shift+X", "action": "toggle_crosshair"},
+        {"name": "Cycle Preset",            "key": "Ctrl+Shift+C", "action": "cycle_preset"},
+        {"name": "Toggle Info Overlay",     "key": "Ctrl+Shift+O", "action": "toggle_overlay"},
+        {"name": "Open Settings",           "key": "Ctrl+Shift+S", "action": "open_settings"},
     ],
 }
 
@@ -219,7 +222,7 @@ def key_string_from_parts(mods, main):
 # ── Action executor ───────────────────────────────────────────────────────────
 
 def execute_action(bind):
-    """Run the action for a keybind dict. All Rust actions run in a background
+    """Run the action for a keybind dict. Rust actions run in a background
     thread so the keyboard hook returns fast and input timing stays clean."""
     action = bind.get("action", "none")
     params = bind.get("params", {})
@@ -227,30 +230,20 @@ def execute_action(bind):
     if action == "none":
         return
 
-    if action == "rust_chat":
-        text = params.get("text", "")
-        threading.Thread(target=_rust_send_chat, args=(text, False),
-                         daemon=True).start()
-
-    elif action == "rust_team_chat":
-        text = params.get("text", "")
-        threading.Thread(target=_rust_send_chat, args=(text, True),
-                         daemon=True).start()
+    if action == "rust_bind":
+        rust_key = params.get("rust_key", "").strip()
+        command  = params.get("command", "").strip()
+        if rust_key and command:
+            # Build the F1 console line:  bind <key> "<command>"
+            # Embedded quotes in the command get escaped.
+            safe_cmd = command.replace('"', '\\"')
+            console_line = f'bind {rust_key} "{safe_cmd}"'
+            threading.Thread(target=_rust_send_console, args=(console_line,),
+                             daemon=True).start()
 
     elif action == "rust_console":
         cmd = params.get("console", "")
         threading.Thread(target=_rust_send_console, args=(cmd,),
-                         daemon=True).start()
-
-    elif action == "rust_hotbar":
-        slot = str(params.get("slot", "")).strip()
-        if slot in ("1", "2", "3", "4", "5", "6"):
-            threading.Thread(target=_simulate_key, args=(slot,),
-                             daemon=True).start()
-
-    elif action == "rust_combat_macro":
-        seq = params.get("sequence", "")
-        threading.Thread(target=_rust_run_sequence, args=(seq,),
                          daemon=True).start()
 
     elif action in ("toggle_crosshair", "toggle_overlay", "cycle_preset", "open_settings"):
@@ -329,26 +322,12 @@ def _type_string(text):
     except Exception:
         pass
 
-def _rust_send_chat(text, team=False):
-    """Open Rust chat, type text, send. team=True uses team chat key (U)."""
-    if not text:
-        return
-    try:
-        # Small delay so the hotkey modifiers release before we start typing
-        time.sleep(0.06)
-        _simulate_key("U" if team else "Enter")
-        time.sleep(0.09)
-        _type_string(text)
-        time.sleep(0.04)
-        _simulate_key("Enter")
-    except Exception:
-        pass
-
 def _rust_send_console(cmd):
     """Open F1 console, run a command, close console."""
     if not cmd:
         return
     try:
+        # Small delay so hotkey modifiers release before we press F1
         time.sleep(0.06)
         _simulate_key("F1")
         time.sleep(0.18)
@@ -357,29 +336,6 @@ def _rust_send_console(cmd):
         _simulate_key("Enter")
         time.sleep(0.08)
         _simulate_key("F1")
-    except Exception:
-        pass
-
-def _rust_run_sequence(sequence):
-    """Run a semicolon-separated sequence of keystrokes with short gaps.
-    Supports key names, 'sleep:NN' for custom delays, and '=' for hold.
-    Example: '6;sleep:150;LMB;sleep:80;1'"""
-    if not sequence:
-        return
-    try:
-        time.sleep(0.04)
-        for token in sequence.split(";"):
-            token = token.strip()
-            if not token:
-                continue
-            if token.lower().startswith("sleep:"):
-                try:
-                    time.sleep(int(token.split(":", 1)[1]) / 1000.0)
-                except Exception:
-                    pass
-                continue
-            _simulate_key(token)
-            time.sleep(0.05)
     except Exception:
         pass
 
@@ -924,52 +880,68 @@ def _open_bind_editor(index):
     style.configure("TCombobox", fieldbackground=_BG2, background=_BG2,
                      foreground=_FG, selectbackground=_TROUGH)
 
-    # Params — meaning depends on action:
-    #   rust_chat / rust_team_chat → chat text (e.g. "/home base1")
-    #   rust_console               → console command (e.g. "kill")
-    #   rust_hotbar                → slot number "1"-"6"
-    #   rust_combat_macro          → semicolon sequence (e.g. "6;LMB;1")
-    tk.Label(pad, text="Parameter", bg=_BG, fg=_FG, font=("Segoe UI", 10)).pack(anchor="w")
+    # Params — two fields, shown/hidden based on action:
+    #   rust_bind    → rust_key (in-game key) + command (bind payload)
+    #   rust_console → command only (as rust_console one-shot)
     params_frame = tk.Frame(pad, bg=_BG)
     params_frame.pack(fill="x", pady=(2, 10))
 
-    param_hint = tk.Label(params_frame, text="", bg=_BG, fg=_FG_DIM,
-                          font=("Segoe UI", 8), anchor="w", justify="left")
-    param_hint.pack(anchor="w")
-
-    param_var = tk.StringVar()
     existing_params = bind.get("params", {})
-    param_val = (existing_params.get("text")
-                 or existing_params.get("console")
-                 or existing_params.get("slot")
-                 or existing_params.get("sequence")
-                 or "")
-    param_var.set(param_val)
-    tk.Entry(params_frame, textvariable=param_var, bg=_BG2, fg=_FG, insertbackground=_FG,
-             relief="flat", font=("Segoe UI", 9)).pack(fill="x")
 
-    _HINTS = {
-        "rust_chat":         "Chat text to send. Example: /home base1  or  gg ez",
-        "rust_team_chat":    "Team chat text. Example: ENEMY NORTH  or  need meds",
-        "rust_console":      "F1 console command. Example: kill  or  graphics.quality 5",
-        "rust_hotbar":       "Hotbar slot number (1-6).",
-        "rust_combat_macro": "Semicolon sequence. Keys: 1-6, LMB, RMB, sleep:150. Ex: 6;LMB;1",
-        "toggle_crosshair":  "(no parameter needed)",
-        "toggle_overlay":    "(no parameter needed)",
-        "cycle_preset":      "(no parameter needed)",
-        "open_settings":     "(no parameter needed)",
-        "none":              "(disabled)",
-    }
-    def _update_hint(*_):
+    # Field 1: rust in-game key (for rust_bind only)
+    field1_lbl = tk.Label(params_frame, text="In-Game Key (Rust)", bg=_BG, fg=_FG,
+                          font=("Segoe UI", 10))
+    field1_hint = tk.Label(params_frame, text="", bg=_BG, fg=_FG_DIM,
+                           font=("Segoe UI", 8), anchor="w", justify="left")
+    rust_key_var = tk.StringVar(value=existing_params.get("rust_key", ""))
+    field1_entry = tk.Entry(params_frame, textvariable=rust_key_var, bg=_BG2, fg=_FG,
+                            insertbackground=_FG, relief="flat", font=("Consolas", 10))
+
+    # Field 2: command / console text
+    field2_lbl = tk.Label(params_frame, text="Command", bg=_BG, fg=_FG,
+                          font=("Segoe UI", 10))
+    field2_hint = tk.Label(params_frame, text="", bg=_BG, fg=_FG_DIM,
+                           font=("Segoe UI", 8), anchor="w", justify="left")
+    cmd_var = tk.StringVar(value=(existing_params.get("command")
+                                  or existing_params.get("console") or ""))
+    field2_entry = tk.Entry(params_frame, textvariable=cmd_var, bg=_BG2, fg=_FG,
+                            insertbackground=_FG, relief="flat", font=("Consolas", 10))
+
+    def _layout_params(aid):
+        for w in (field1_lbl, field1_hint, field1_entry,
+                  field2_lbl, field2_hint, field2_entry):
+            w.pack_forget()
+
+        if aid == "rust_bind":
+            field1_lbl.pack(anchor="w")
+            field1_hint.config(text="Rust key name, e.g. n, mouse4, f5, keypad1, capslock")
+            field1_hint.pack(anchor="w")
+            field1_entry.pack(fill="x", pady=(0, 8))
+            field2_lbl.config(text="Rust Command")
+            field2_lbl.pack(anchor="w")
+            field2_hint.config(text="Console command(s), e.g. forward;sprint  or  gesture wave")
+            field2_hint.pack(anchor="w")
+            field2_entry.pack(fill="x")
+
+        elif aid == "rust_console":
+            field2_lbl.config(text="Console Command")
+            field2_lbl.pack(anchor="w")
+            field2_hint.config(text="One-shot F1 command, e.g. kill, respawn, combatlog")
+            field2_hint.pack(anchor="w")
+            field2_entry.pack(fill="x")
+
+        # overlay actions: no params
+
+    def _update_params(*_):
         txt = action_var.get()
         aid = "none"
         for k, v in ACTION_TYPES.items():
             if txt.startswith(v["label"]):
                 aid = k
                 break
-        param_hint.config(text=_HINTS.get(aid, ""))
-    action_var.trace_add("write", _update_hint)
-    _update_hint()
+        _layout_params(aid)
+    action_var.trace_add("write", _update_params)
+    _update_params()
 
     # Save / Cancel
     btn_frame = tk.Frame(pad, bg=_BG)
@@ -991,17 +963,16 @@ def _open_bind_editor(index):
             "enabled": bind.get("enabled", True),
         }
 
-        # Build params — key name depends on action type
-        pv = param_var.get().strip()
-        if pv:
-            if aid in ("rust_chat", "rust_team_chat"):
-                new_bind["params"] = {"text": pv}
-            elif aid == "rust_console":
-                new_bind["params"] = {"console": pv}
-            elif aid == "rust_hotbar":
-                new_bind["params"] = {"slot": pv}
-            elif aid == "rust_combat_macro":
-                new_bind["params"] = {"sequence": pv}
+        # Build params based on action type
+        if aid == "rust_bind":
+            rk = rust_key_var.get().strip()
+            cv = cmd_var.get().strip()
+            if rk and cv:
+                new_bind["params"] = {"rust_key": rk, "command": cv}
+        elif aid == "rust_console":
+            cv = cmd_var.get().strip()
+            if cv:
+                new_bind["params"] = {"console": cv}
 
         if is_new:
             cfg["binds"].append(new_bind)
